@@ -22,8 +22,9 @@ import { z } from 'zod';
 
 type PaymentOrder = z.infer<typeof paymentOrderSchema>;
 
-const opTypes: Record<string, Partial<PaymentOrder>> = {
+const opTypes: Record<string, Partial<PaymentOrder> & { label: string }> = {
   "contrib_munca": {
+    label: "Contrib_Munca",
     iban_platitor: "RO68TREZ2915069XXX023911",
     den_trezorerie: "Trezorerie Municipiul Craiova",
     cui_beneficiar: "24372699",
@@ -33,6 +34,7 @@ const opTypes: Record<string, Partial<PaymentOrder>> = {
     explicatii: "Sume din contributia asiguratorie pentru munca in curs de distribuire",
   },
   "buget_asig": {
+    label: "Buget_Asig_Sociale",
     iban_platitor: "RO68TREZ2915069XXX023911",
     den_trezorerie: "Trezorerie Municipiul Craiova",
     cui_beneficiar: "24372699",
@@ -42,6 +44,7 @@ const opTypes: Record<string, Partial<PaymentOrder>> = {
     explicatii: "BUGETUL DE STAT BUGETELE ASIG SOC SI FD SPEC in curs de distribuir",
   },
   "tva_trim": {
+    label: "TVA_Trimestrial",
     iban_platitor: "RO68TREZ2915069XXX023911",
     den_trezorerie: "Trezorerie Municipiul Craiova",
     cui_beneficiar: "24372699",
@@ -51,7 +54,6 @@ const opTypes: Record<string, Partial<PaymentOrder>> = {
     explicatii: "TVA decont trim",
   }
 };
-
 
 const defaultValues: FormData = {
   d_rec: "0",
@@ -85,19 +87,25 @@ export function F1129Form() {
   const { toast } = useToast();
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
-    defaultValues,
   });
 
   const { fields, append, remove, update } = useFieldArray({
     control: form.control,
     name: 'rand_op',
   });
+
+  useEffect(() => {
+    form.reset(defaultValues);
+  }, [form]);
   
   const handleOpTypeChange = (value: string, index: number) => {
     const preset = opTypes[value];
     if (preset) {
       const currentField = fields[index];
-      update(index, { ...currentField, ...preset, suma_op: currentField.suma_op || 0 });
+      // Keep existing suma_op and nr_op
+      const { suma_op, nr_op } = currentField;
+      const updatedField = { ...currentField, ...preset, suma_op, nr_op };
+      update(index, updatedField);
     }
   };
 
@@ -165,6 +173,10 @@ export function F1129Form() {
     }
   };
 
+  const getOpTypeKeyByIBAN = (iban: string) => {
+    return Object.keys(opTypes).find(key => opTypes[key].iban_beneficiar === iban);
+  };
+  
   const onSubmit = (data: FormData) => {
     let filesGenerated = 0;
     data.rand_op.forEach((op, index) => {
@@ -175,6 +187,11 @@ export function F1129Form() {
 
       const formattedDate = format(data.data_document, "dd.MM.yyyy");
       const sumaControl = data.cui_ip + String(total_opm).replace('.', '');
+      
+      const opTypeKey = getOpTypeKeyByIBAN(op.iban_beneficiar);
+      const opTypeLabel = opTypeKey ? opTypes[opTypeKey].label : `OP_${index + 1}`;
+      const uniqueId = Date.now();
+      const fileName = `f1129_${opTypeLabel}_${uniqueId}.xml`;
 
       const xmlString = `<?xml version="1.0" encoding="UTF-8"?>
 <f1129 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="mfp:anaf:dgti:f1129:declaratie:v1" xsi:schemaLocation="mfp:anaf:dgti:f1129:declaratie:v1" versiune_pdf="A2.0.42" d_rec="${data.d_rec}" suma_control="${sumaControl}" total_opm="${total_opm}" nr_inregistrari="${nr_inregistrari}" luna_r="${data.luna_r}" an="${data.an}" data_document="${formattedDate}" nr_document="${data.nr_document}" nume_ip="${data.nume_ip}" adresa_ip="${data.adresa_ip}" cui_ip="${data.cui_ip}" tip_ent="${data.tip_ent}" cod_trez_pl="${data.cod_trez_pl}">
@@ -186,7 +203,7 @@ ${randOpXml}
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.setAttribute('download', `f1129_op_${index + 1}.xml`);
+        link.setAttribute('download', fileName);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -209,6 +226,10 @@ ${randOpXml}
     }
   };
   
+  if (!form.formState.isDirty && !form.formState.isSubmitted) {
+    return null; // Don't render form until default values are set
+  }
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -283,7 +304,8 @@ ${randOpXml}
               <CardContent className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                  <FormItem className="md:col-span-2 lg:col-span-3">
                     <FormLabel>Selectare tip OP</FormLabel>
-                    <Select onValueChange={(value) => handleOpTypeChange(value, index)}>
+                    <Select onValueChange={(value) => handleOpTypeChange(value, index)}
+                        value={getOpTypeKeyByIBAN(form.watch(`rand_op.${index}.iban_beneficiar`))}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Selectați un tip de plată pentru a pre-completa câmpurile" />
@@ -320,10 +342,13 @@ ${randOpXml}
                 const newOp = { ...defaultValues.rand_op[0] };
                 Object.keys(newOp).forEach(key => {
                     const k = key as keyof PaymentOrder;
-                    if (k !== 'suma_op' && k !== 'nr_op') {
+                    if (k !== 'suma_op') {
                        (newOp as any)[k] = '';
-                    } else if (k === 'suma_op') {
+                    } else {
                         newOp.suma_op = 0;
+                    }
+                    if (k === 'nr_op') {
+                        newOp.nr_op = String(fields.length + 22);
                     }
                 });
                 append(newOp);
