@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, useWatch, useFormContext } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from "date-fns";
 import { ro } from "date-fns/locale";
@@ -55,12 +55,11 @@ const opTypes: Record<string, Partial<PaymentOrder> & { label: string }> = {
   }
 };
 
-const defaultValues: FormData = {
+const defaultValues: Omit<FormData, 'data_document'> = {
   d_rec: "0",
   suma_control: "24372783",
   luna_r: "10",
   an: "2025",
-  data_document: new Date(),
   nr_document: "0000000022",
   nume_ip: "SC MAXDESIGN SRL",
   adresa_ip: "Str Constantin Brancoveanu nr79 bl60A sc1 ap7",
@@ -82,33 +81,77 @@ const defaultValues: FormData = {
   ],
 };
 
+function OrdinePlataCard({ index }: { index: number }) {
+  const { control, getValues, setValue } = useFormContext<FormData>();
+  const ibanBeneficiar = useWatch({
+    control,
+    name: `rand_op.${index}.iban_beneficiar`,
+  });
+
+  const getOpTypeKeyByIBAN = (iban: string | undefined) => {
+    if (!iban) return undefined;
+    return Object.keys(opTypes).find(key => opTypes[key].iban_beneficiar === iban);
+  };
+  
+  const handleOpTypeChange = (value: string) => {
+    const preset = opTypes[value];
+    if (preset) {
+      const currentSuma = getValues(`rand_op.${index}.suma_op`);
+      const currentNrOp = getValues(`rand_op.${index}.nr_op`);
+      
+      Object.keys(preset).forEach(key => {
+        const fieldKey = key as keyof PaymentOrder;
+        if (fieldKey !== 'suma_op' && fieldKey !== 'nr_op') {
+            setValue(`rand_op.${index}.${fieldKey}`, preset[fieldKey] as any);
+        }
+      });
+      setValue(`rand_op.${index}.suma_op`, currentSuma || 0);
+      setValue(`rand_op.${index}.nr_op`, currentNrOp || '');
+    }
+  };
+
+  return (
+    <FormItem className="md:col-span-2 lg:col-span-3">
+        <FormLabel>Selectare tip OP</FormLabel>
+        <Select 
+            onValueChange={(value) => handleOpTypeChange(value)}
+            value={getOpTypeKeyByIBAN(ibanBeneficiar)}
+        >
+          <FormControl>
+            <SelectTrigger>
+              <SelectValue placeholder="Selectați un tip de plată pentru a pre-completa câmpurile" />
+            </SelectTrigger>
+          </FormControl>
+          <SelectContent>
+            <SelectItem value="contrib_munca">Sume din contributia asiguratorie pentru munca</SelectItem>
+            <SelectItem value="buget_asig">BUGETUL DE STAT BUGETELE ASIG SOC SI FD SPEC</SelectItem>
+            <SelectItem value="tva_trim">TVA decont trim</SelectItem>
+          </SelectContent>
+        </Select>
+    </FormItem>
+  );
+}
+
+
 export function F1129Form() {
   const [xmlInput, setXmlInput] = useState('');
   const { toast } = useToast();
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
+    defaultValues: {
+      ...defaultValues,
+      data_document: new Date(),
+    },
   });
 
-  const { fields, append, remove, update } = useFieldArray({
+  const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: 'rand_op',
   });
-
-  useEffect(() => {
-    form.reset(defaultValues);
-  }, [form]);
   
-  const handleOpTypeChange = (value: string, index: number) => {
-    const preset = opTypes[value];
-    if (preset) {
-      const currentField = fields[index];
-      // Keep existing suma_op and nr_op
-      const { suma_op, nr_op } = currentField;
-      const updatedField = { ...currentField, ...preset, suma_op, nr_op };
-      update(index, updatedField);
-    }
-  };
-
+  useEffect(() => {
+    form.setValue('data_document', new Date());
+  }, [form]);
 
   const handleLoadXml = () => {
     try {
@@ -190,7 +233,7 @@ export function F1129Form() {
       
       const opTypeKey = getOpTypeKeyByIBAN(op.iban_beneficiar);
       const opTypeLabel = opTypeKey ? opTypes[opTypeKey].label : `OP_${index + 1}`;
-      const uniqueId = Date.now();
+      const uniqueId = Date.now() + index;
       const fileName = `f1129_${opTypeLabel}_${uniqueId}.xml`;
 
       const xmlString = `<?xml version="1.0" encoding="UTF-8"?>
@@ -225,10 +268,6 @@ ${randOpXml}
       });
     }
   };
-  
-  if (!form.formState.isDirty && !form.formState.isSubmitted) {
-    return null; // Don't render form until default values are set
-  }
 
   return (
     <Form {...form}>
@@ -302,22 +341,7 @@ ${randOpXml}
                 <CardTitle className="font-headline">Ordin de Plată #{index + 1}</CardTitle>
               </CardHeader>
               <CardContent className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                 <FormItem className="md:col-span-2 lg:col-span-3">
-                    <FormLabel>Selectare tip OP</FormLabel>
-                    <Select onValueChange={(value) => handleOpTypeChange(value, index)}
-                        value={getOpTypeKeyByIBAN(form.watch(`rand_op.${index}.iban_beneficiar`))}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selectați un tip de plată pentru a pre-completa câmpurile" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="contrib_munca">Sume din contributia asiguratorie pentru munca</SelectItem>
-                        <SelectItem value="buget_asig">BUGETUL DE STAT BUGETELE ASIG SOC SI FD SPEC</SelectItem>
-                        <SelectItem value="tva_trim">TVA decont trim</SelectItem>
-                      </SelectContent>
-                    </Select>
-                 </FormItem>
+                 <OrdinePlataCard index={index} />
                  <FormField control={form.control} name={`rand_op.${index}.suma_op`} render={({ field }) => ( <FormItem> <FormLabel>Sumă</FormLabel> <FormControl><Input type="number" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl> <FormMessage /> </FormItem> )} />
                  <FormField control={form.control} name={`rand_op.${index}.nr_op`} render={({ field }) => ( <FormItem> <FormLabel>Nr. OP</FormLabel> <FormControl><Input {...field} /></FormControl> <FormMessage /> </FormItem> )} />
                  <FormField control={form.control} name={`rand_op.${index}.iban_platitor`} render={({ field }) => ( <FormItem> <FormLabel>IBAN Plătitor</FormLabel> <FormControl><Input {...field} /></FormControl> <FormMessage /> </FormItem> )} />
