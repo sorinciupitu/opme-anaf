@@ -58,7 +58,7 @@ const defaultValues: FormData = {
   suma_control: "24372783",
   luna_r: "10",
   an: "2025",
-  data_document: null as any, // Initialize as null to avoid hydration mismatch
+  data_document: new Date(),
   nr_document: "0000000022",
   nume_ip: "SC MAXDESIGN SRL",
   adresa_ip: "Str Constantin Brancoveanu nr79 bl60A sc1 ap7",
@@ -93,14 +93,6 @@ export function F1129Form() {
     control: form.control,
     name: 'rand_op',
   });
-
-  useEffect(() => {
-    // Set the date on the client side to avoid hydration mismatch
-    form.reset({
-      ...defaultValues,
-      data_document: new Date(),
-    });
-  }, [form]);
   
   const handleOpTypeChange = (value: string, index: number) => {
     const preset = opTypes[value];
@@ -261,9 +253,11 @@ ${randOpXml}
                         mode="single"
                         selected={field.value}
                         onSelect={field.onChange}
-                        disabled={(date) =>
-                          date > new Date() || date < new Date("1900-01-01")
-                        }
+                        disabled={(date) => {
+                            const today = new Date();
+                            today.setHours(0, 0, 0, 0);
+                            return date < today;
+                        }}
                         initialFocus
                         locale={ro}
                       />
@@ -370,7 +364,7 @@ ${randOpXml}
             </Dialog>
             <Button type="submit" className="bg-accent text-accent-foreground hover:bg-accent/90"><Download className="mr-2 h-4 w-4" /> Generează și Descarcă XML</Button>
             <Button asChild variant="secondary">
-                <a href="https://static.anaf.ro/static/10/Anaf/formulare/F1129_XML_20180321.zip" target="_blank" rel="noopener noreferrer">
+                <a href="https://static.anaf.ro/static/10/Anaf/Declaratii_R/1129.html" target="_blank" rel="noopener noreferrer">
                     <RefreshCw className="mr-2 h-4 w-4" /> Actualizare fișier OPME
                 </a>
             </Button>
