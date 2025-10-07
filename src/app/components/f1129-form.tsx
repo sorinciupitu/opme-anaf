@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from "date-fns";
@@ -58,7 +58,7 @@ const defaultValues: FormData = {
   suma_control: "24372783",
   luna_r: "10",
   an: "2025",
-  data_document: new Date(),
+  data_document: null as any, // Initialize as null to avoid hydration mismatch
   nr_document: "0000000022",
   nume_ip: "SC MAXDESIGN SRL",
   adresa_ip: "Str Constantin Brancoveanu nr79 bl60A sc1 ap7",
@@ -93,6 +93,14 @@ export function F1129Form() {
     control: form.control,
     name: 'rand_op',
   });
+
+  useEffect(() => {
+    // Set the date on the client side to avoid hydration mismatch
+    form.reset({
+      ...defaultValues,
+      data_document: new Date(),
+    });
+  }, [form]);
   
   const handleOpTypeChange = (value: string, index: number) => {
     const preset = opTypes[value];
@@ -361,3 +369,5 @@ ${randOpXml}
     </Form>
   );
 }
+
+    
