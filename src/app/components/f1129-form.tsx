@@ -85,9 +85,13 @@ export function F1129Form() {
   const { toast } = useToast();
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
-    defaultValues,
-    mode: 'onBlur',
+    // We will set defaultValues in useEffect to avoid hydration errors
+    // with new Date()
   });
+
+  useEffect(() => {
+    form.reset(defaultValues);
+  }, [form]);
 
   const { fields, append, remove, update } = useFieldArray({
     control: form.control,
@@ -209,6 +213,10 @@ ${randOpXml}
       });
     }
   };
+
+  if (!form.formState.isDirty && !form.formState.isSubmitted) {
+    return null; // or a loading indicator
+  }
 
   return (
     <Form {...form}>
