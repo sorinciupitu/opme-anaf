@@ -17,7 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { useToast } from '@/hooks/use-toast';
-import { Download, Upload, PlusCircle, Trash2, CalendarIcon } from 'lucide-react';
+import { Download, Upload, PlusCircle, Trash2, CalendarIcon, RefreshCw } from 'lucide-react';
 import { z } from 'zod';
 
 type PaymentOrder = z.infer<typeof paymentOrderSchema>;
@@ -223,38 +223,6 @@ ${randOpXml}
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <Card className="shadow-lg">
           <CardHeader>
-            <CardTitle className="font-headline text-2xl">Acțiuni rapide</CardTitle>
-            <CardDescription>Importați date dintr-un fișier XML sau generați unul nou pe baza datelor din formular.</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-wrap gap-4">
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button variant="outline"><Upload className="mr-2 h-4 w-4" /> Încarcă din XML</Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[625px]">
-                <DialogHeader>
-                  <DialogTitle className="font-headline">Importă date din XML</DialogTitle>
-                  <DialogDescription>Copiați conținutul fișierului XML în câmpul de mai jos și apăsați 'Încarcă Date'.</DialogDescription>
-                </DialogHeader>
-                <Textarea
-                  placeholder="<f1129>...</f1129>"
-                  className="min-h-[200px] font-mono text-xs"
-                  value={xmlInput}
-                  onChange={(e) => setXmlInput(e.target.value)}
-                />
-                <DialogFooter>
-                  <DialogClose asChild>
-                    <Button type="button" onClick={() => { if(handleLoadXml()) setXmlInput('') }}>Încarcă Date</Button>
-                  </DialogClose>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-            <Button type="submit" className="bg-accent text-accent-foreground hover:bg-accent/90"><Download className="mr-2 h-4 w-4" /> Generează și Descarcă XML</Button>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-lg">
-          <CardHeader>
             <CardTitle className="font-headline text-2xl">Date Generale Declarație</CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -371,6 +339,43 @@ ${randOpXml}
             <PlusCircle className="mr-2 h-4 w-4" /> Adaugă Ordin de Plată
           </Button>
         </div>
+        
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle className="font-headline text-2xl">Acțiuni rapide</CardTitle>
+            <CardDescription>Importați, exportați sau actualizați datele formularului.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-wrap gap-4">
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline"><Upload className="mr-2 h-4 w-4" /> Încarcă din XML</Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[625px]">
+                <DialogHeader>
+                  <DialogTitle className="font-headline">Importă date din XML</DialogTitle>
+                  <DialogDescription>Copiați conținutul fișierului XML în câmpul de mai jos și apăsați 'Încarcă Date'.</DialogDescription>
+                </DialogHeader>
+                <Textarea
+                  placeholder="<f1129>...</f1129>"
+                  className="min-h-[200px] font-mono text-xs"
+                  value={xmlInput}
+                  onChange={(e) => setXmlInput(e.target.value)}
+                />
+                <DialogFooter>
+                  <DialogClose asChild>
+                    <Button type="button" onClick={() => { if(handleLoadXml()) setXmlInput('') }}>Încarcă Date</Button>
+                  </DialogClose>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            <Button type="submit" className="bg-accent text-accent-foreground hover:bg-accent/90"><Download className="mr-2 h-4 w-4" /> Generează și Descarcă XML</Button>
+            <Button asChild variant="secondary">
+                <a href="https://static.anaf.ro/static/10/Anaf/formulare/F1129_XML_20180321.zip" target="_blank" rel="noopener noreferrer">
+                    <RefreshCw className="mr-2 h-4 w-4" /> Actualizare fișier OPME
+                </a>
+            </Button>
+          </CardContent>
+        </Card>
       </form>
     </Form>
   );
