@@ -8,7 +8,7 @@ export const paymentOrderSchema = z.object({
   den_beneficiar: z.string().min(1, { message: "Denumire beneficiar este obligatorie." }),
   iban_beneficiar: z.string().min(1, { message: "IBAN beneficiar este obligatoriu." }),
   den_banca_trez: z.string().min(1, { message: "Banca/Trezoreria este obligatorie." }),
-  suma_op: z.coerce.number().min(0, { message: "Suma trebuie să fie un număr pozitiv." }),
+  suma_op: z.coerce.number().min(0.01, { message: "Suma trebuie să fie mai mare ca 0." }),
   explicatii: z.string().min(1, { message: "Explicațiile sunt obligatorii." }),
 });
 
@@ -18,7 +18,9 @@ export const formSchema = z.object({
   suma_control: z.string().min(1, { message: "Suma de control este obligatorie." }),
   luna_r: z.string().min(1, { message: "Luna este obligatorie." }),
   an: z.string().min(4, { message: "Anul trebuie să aibă 4 cifre." }),
-  data_document: z.string().min(1, { message: "Data documentului este obligatorie." }),
+  data_document: z.date({
+    required_error: "Data documentului este obligatorie.",
+  }),
   nr_document: z.string().min(1, { message: "Numărul documentului este obligatoriu." }),
   nume_ip: z.string().min(1, { message: "Numele este obligatoriu." }),
   adresa_ip: z.string().min(1, { message: "Adresa este obligatorie." }),
