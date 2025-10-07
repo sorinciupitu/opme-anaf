@@ -175,39 +175,45 @@ export function F1129Form() {
   };
 
   const onSubmit = (data: FormData) => {
-    const total_opm = data.rand_op.reduce((sum, op) => sum + op.suma_op, 0);
-    const nr_inregistrari = data.rand_op.length;
+    let filesGenerated = 0;
+    data.rand_op.forEach((op, index) => {
+      const total_opm = op.suma_op;
+      const nr_inregistrari = 1;
 
-    let randOpXml = data.rand_op.map(op => 
-      `<rand_op nr_op="${op.nr_op}" iban_platitor="${op.iban_platitor}" den_trezorerie="${op.den_trezorerie}" cui_beneficiar="${op.cui_beneficiar}" den_beneficiar="${op.den_beneficiar}" iban_beneficiar="${op.iban_beneficiar}" den_banca_trez="${op.den_banca_trez}" suma_op="${op.suma_op}" explicatii="${op.explicatii}"/>`
-    ).join('\n');
+      let randOpXml = `<rand_op nr_op="${op.nr_op}" iban_platitor="${op.iban_platitor}" den_trezorerie="${op.den_trezorerie}" cui_beneficiar="${op.cui_beneficiar}" den_beneficiar="${op.den_beneficiar}" iban_beneficiar="${op.iban_beneficiar}" den_banca_trez="${op.den_banca_trez}" suma_op="${op.suma_op}" explicatii="${op.explicatii}"/>`;
 
-    const formattedDate = format(data.data_document, "dd.MM.yyyy");
+      const formattedDate = format(data.data_document, "dd.MM.yyyy");
+      const sumaControl = data.cui_ip + String(total_opm).replace('.', '');
 
-    const xmlString = `<?xml version="1.0" encoding="UTF-8"?>
-<f1129 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="mfp:anaf:dgti:f1129:declaratie:v1" xsi:schemaLocation="mfp:anaf:dgti:f1129:declaratie:v1" versiune_pdf="A2.0.42" d_rec="${data.d_rec}" suma_control="${data.suma_control}" total_opm="${total_opm}" nr_inregistrari="${nr_inregistrari}" luna_r="${data.luna_r}" an="${data.an}" data_document="${formattedDate}" nr_document="${data.nr_document}" nume_ip="${data.nume_ip}" adresa_ip="${data.adresa_ip}" cui_ip="${data.cui_ip}" tip_ent="${data.tip_ent}" cod_trez_pl="${data.cod_trez_pl}">
+      const xmlString = `<?xml version="1.0" encoding="UTF-8"?>
+<f1129 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="mfp:anaf:dgti:f1129:declaratie:v1" xsi:schemaLocation="mfp:anaf:dgti:f1129:declaratie:v1" versiune_pdf="A2.0.42" d_rec="${data.d_rec}" suma_control="${sumaControl}" total_opm="${total_opm}" nr_inregistrari="${nr_inregistrari}" luna_r="${data.luna_r}" an="${data.an}" data_document="${formattedDate}" nr_document="${data.nr_document}" nume_ip="${data.nume_ip}" adresa_ip="${data.adresa_ip}" cui_ip="${data.cui_ip}" tip_ent="${data.tip_ent}" cod_trez_pl="${data.cod_trez_pl}">
 ${randOpXml}
 </f1129>`;
 
-    try {
-      const blob = new Blob([xmlString], { type: 'application/xml;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', 'f1129_generat.xml');
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      try {
+        const blob = new Blob([xmlString], { type: 'application/xml;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `f1129_op_${index + 1}.xml`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        filesGenerated++;
+      } catch (error) {
+        toast({
+          variant: "destructive",
+          title: `Eroare la generarea fișierului pentru OP #${index + 1}`,
+          description: "Nu s-a putut genera fișierul XML.",
+        });
+      }
+    });
+
+    if (filesGenerated > 0) {
       toast({
-        title: "XML Generat!",
-        description: "Fișierul XML a fost descărcat cu succes.",
-      });
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Eroare la generare",
-        description: "Nu s-a putut genera fișierul XML.",
+        title: "XML-uri Generate!",
+        description: `${filesGenerated} fișier(e) XML au fost descărcate cu succes.`,
       });
     }
   };
@@ -369,5 +375,3 @@ ${randOpXml}
     </Form>
   );
 }
-
-    
