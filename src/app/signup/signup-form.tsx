@@ -27,6 +27,8 @@ import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
 import { Spinner } from '@/components/spinner';
+import { useFirebase } from '@/firebase';
+import { doc, setDoc } from 'firebase/firestore';
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Adresă de email invalidă.' }),
@@ -35,6 +37,7 @@ const formSchema = z.object({
 
 export function SignUpForm() {
   const { signUpWithEmail, loading: authLoading } = useAuth();
+  const { firestore } = useFirebase();
   const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -50,10 +53,31 @@ export function SignUpForm() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
     try {
-      await signUpWithEmail(values.email, values.password);
+      const userCredential = await signUpWithEmail(values.email, values.password);
+      const user = userCredential;
+
+      if (user && firestore) {
+        // Create user profile in Firestore
+        const userProfile = {
+          email: user.email,
+          role: 'user', // Default role
+          status: 'pending', // Default status
+          createdAt: new Date(),
+        };
+        await setDoc(doc(firestore, 'users', user.uid), userProfile);
+
+        // This is where you would set the first user as admin
+        // For simplicity, we'll assume the first user is the admin.
+        // In a real app, you'd have a more secure way to do this.
+        if (user.uid === 'YOUR_ADMIN_UID_HERE') {
+             await setDoc(doc(firestore, 'users', user.uid), { ...userProfile, role: 'admin', status: 'approved' }, { merge: true });
+        }
+      }
+
+
       toast({
         title: 'Cont creat cu succes!',
-        description: 'Vei fi redirecționat către panoul principal.',
+        description: 'Contul tău este în așteptarea aprobării unui administrator.',
       });
       router.push('/');
     } catch (error: any) {

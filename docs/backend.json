@@ -127,6 +127,47 @@
         "id",
         "f1129Id"
       ]
+    },
+    "UserProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User Profile",
+      "type": "object",
+      "description": "Represents a user's profile in the system.",
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "The user's email address."
+        },
+        "role": {
+          "type": "string",
+          "description": "The user's role.",
+          "enum": [
+            "user",
+            "admin"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "description": "The user's account status.",
+          "enum": [
+            "pending",
+            "approved",
+            "rejected"
+          ]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The date and time the user's account was created."
+        }
+      },
+      "required": [
+        "email",
+        "role",
+        "status",
+        "createdAt"
+      ]
     }
   },
   "auth": {
@@ -138,50 +179,15 @@
   "firestore": {
     "structure": [
       {
-        "path": "/users/{userId}/f1129s/{f1129Id}",
+        "path": "/users/{userId}",
         "definition": {
-          "entityName": "F1129",
+          "entityName": "UserProfile",
           "schema": {
-            "$ref": "#/backend/entities/F1129"
+            "$ref": "#/backend/entities/UserProfile"
           },
-          "description": "Stores F1129 form data owned by a specific user.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The ID of the user who owns the F1129 form."
-            },
-            {
-              "name": "f1129Id",
-              "description": "The unique ID of the F1129 form."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/f1129s/{f1129Id}/randOps/{randOpId}",
-        "definition": {
-          "entityName": "RandOp",
-          "schema": {
-            "$ref": "#/backend/entities/RandOp"
-          },
-          "description": "Stores RandOp (payment operation row) data associated with a specific F1129 form.  The parent f1129Id and userId provide authorization context.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The ID of the user who owns the F1129 form (and thus the RandOp)."
-            },
-            {
-              "name": "f1129Id",
-              "description": "The ID of the parent F1129 form."
-            },
-            {
-              "name": "randOpId",
-              "description": "The unique ID of the RandOp."
-            }
-          ]
+          "description": "Stores user profile data, including role and status."
         }
       }
-    ],
-    "reasoning": "The Firestore structure is designed to store F1129 form data and related payment operation rows (RandOp). Given that the application focuses on automatically filling the F1129 form and preserving its structure for digital signatures, the structure prioritizes data integrity and easy retrieval.\n\n**Structure Justification:**\n\n1.  **/users/{userId}/f1129s/{f1129Id}**: This path stores the F1129 form data. Each user owns their F1129 forms. This structure provides path-based ownership.\n2.  **/users/{userId}/f1129s/{f1129Id}/randOps/{randOpId}**: This path stores the payment operation rows associated with an F1129 form. These rows are nested under the corresponding F1129 document.\n\n**Authorization Independence:**\n\nThe structure does not require denormalization because the relationship between users and their F1129 forms is path-based.  Authorization rules can rely on `request.auth.uid` matching the `userId` in the path.  The `RandOp` documents inherit ownership from the parent `F1129` document, so no further denormalization is needed.\n\n**QAPs (Rules are not Filters):**\n\nThis structure naturally supports secure `list` operations because data with different access needs are stored in separate collections (private data under `/users/{userId}`).  Listing F1129 forms or `RandOp` rows is restricted to the owning user, preventing unauthorized access.\n"
+    ]
   }
 }

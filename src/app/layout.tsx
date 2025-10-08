@@ -1,7 +1,7 @@
 import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
-import { FirebaseProvider } from '@/firebase/client-provider';
+import { FirebaseClientProvider } from '@/firebase/client-provider';
 
 export const metadata: Metadata = {
   title: 'F1129 Autofill',
@@ -21,9 +21,9 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Alegreya:wght@700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body antialiased">
-        <FirebaseProvider>
+        <FirebaseClientProvider>
           {children}
-        </FirebaseProvider>
+        </FirebaseClientProvider>
         <Toaster />
       </body>
     </html>

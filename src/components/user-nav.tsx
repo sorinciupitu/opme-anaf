@@ -12,12 +12,25 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/firebase/auth/use-auth';
-import { LogOut, User } from 'lucide-react';
+import { LogOut, User, Shield } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
+import { useDoc } from '@/firebase/firestore/use-doc';
+import { UserProfile } from '@/lib/definitions';
+import { useMemo } from 'react';
 
 export function UserNav() {
   const { user, signOut, loading } = useAuth();
   const router = useRouter();
+  const { firestore } = useFirebase();
+
+  const userProfileRef = useMemo(() => {
+    if (!firestore || !user) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [firestore, user]);
+
+  const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
 
   const handleSignOut = async () => {
     await signOut();
@@ -67,6 +80,12 @@ export function UserNav() {
             <User className="mr-2 h-4 w-4" />
             <span>Profil</span>
           </DropdownMenuItem>
+          {userProfile?.role === 'admin' && (
+            <DropdownMenuItem onClick={() => router.push('/admin')}>
+              <Shield className="mr-2 h-4 w-4" />
+              <span>Admin Panel</span>
+            </DropdownMenuItem>
+          )}
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleSignOut}>
