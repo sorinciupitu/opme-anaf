@@ -139,15 +139,14 @@ export function F1129Form() {
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      ...defaultValues
+      ...defaultValues,
+      data_document: new Date()
     },
   });
 
   useEffect(() => {
-    form.reset({
-      ...defaultValues,
-      data_document: new Date()
-    });
+    // We only want to set the date on the client to avoid hydration errors
+    form.setValue('data_document', new Date());
   }, [form]);
 
   const { fields, append, remove } = useFieldArray({
@@ -234,11 +233,11 @@ export function F1129Form() {
     }
 
     let filesGenerated = 0;
-    const nrDocumentPadded = String(data.nr_document).padStart(10, '0');
 
     data.rand_op.forEach((op, index) => {
       const total_opm = op.suma_op;
       const nr_inregistrari = 1;
+      const nrDocumentPadded = String(op.nr_op).padStart(10, '0');
       
       let randOpXml = `<rand_op nr_op="${op.nr_op}" iban_platitor="${op.iban_platitor}" den_trezorerie="${op.den_trezorerie}" cui_beneficiar="${op.cui_beneficiar}" den_beneficiar="${op.den_beneficiar}" iban_beneficiar="${op.iban_beneficiar}" den_banca_trez="${op.den_banca_trez}" suma_op="${op.suma_op}" explicatii="${op.explicatii}"/>`;
 
