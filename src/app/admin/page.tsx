@@ -3,10 +3,10 @@
 import { useAuth } from '@/firebase/auth/use-auth';
 import { useCollection, WithId } from '@/firebase/firestore/use-collection';
 import { useDoc } from '@/firebase/firestore/use-doc';
-import { collection, doc, updateDoc } from 'firebase/firestore';
+import { collection, doc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo } from 'react';
-import { useFirebase } from '@/firebase';
+import { useFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { UserProfile } from '@/lib/definitions';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,14 +18,12 @@ import { Spinner } from '@/components/spinner';
 function UserManagementTable({ users }: { users: WithId<UserProfile>[] }) {
   const { firestore } = useFirebase();
 
-  const handleUpdateStatus = async (userId: string, status: 'approved' | 'rejected') => {
+  const handleUpdateStatus = (userId: string, status: 'approved' | 'rejected') => {
     if (!firestore) return;
     const userRef = doc(firestore, 'users', userId);
-    try {
-      await updateDoc(userRef, { status });
-    } catch (error) {
-      console.error('Error updating user status:', error);
-    }
+    // Use the non-blocking update function to avoid unhandled promise rejections
+    // and to correctly propagate permission errors.
+    updateDocumentNonBlocking(userRef, { status });
   };
 
   return (
