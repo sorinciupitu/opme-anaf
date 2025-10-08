@@ -52,10 +52,19 @@ export function SignUpForm() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
+    if (!firestore) {
+        toast({
+            variant: 'destructive',
+            title: 'Eroare de configurare',
+            description: 'Serviciul Firestore nu este disponibil.',
+        });
+        setIsSubmitting(false);
+        return;
+    }
     try {
       const user = await signUpWithEmail(values.email, values.password);
 
-      if (user && firestore) {
+      if (user) {
         // Create user profile in Firestore
         const userProfile = {
           email: user.email,
@@ -63,13 +72,14 @@ export function SignUpForm() {
           status: 'pending', // Default status
           createdAt: new Date(),
         };
-        await setDoc(doc(firestore, 'users', user.uid), userProfile);
+        
+        const userDocRef = doc(firestore, 'users', user.uid);
+        await setDoc(userDocRef, userProfile);
 
-        // This is where you would set the first user as admin
-        // For simplicity, we'll assume the first user is the admin.
-        // In a real app, you'd have a more secure way to do this.
-        if (user.uid === 'YOUR_ADMIN_UID_HERE') {
-             await setDoc(doc(firestore, 'users', user.uid), { ...userProfile, role: 'admin', status: 'approved' }, { merge: true });
+        // This is where you set the first user as admin.
+        // IMPORTANT: Replace 'PASTE_YOUR_UID_HERE' with your actual User UID from the Firebase Console.
+        if (user.uid === 'PASTE_YOUR_UID_HERE') {
+             await setDoc(userDocRef, { role: 'admin', status: 'approved' }, { merge: true });
         }
       }
 
