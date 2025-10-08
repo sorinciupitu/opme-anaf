@@ -142,7 +142,7 @@ export function F1129Form() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       ...defaultValues,
-      data_document: new Date()
+      data_document: undefined
     },
   });
 
@@ -323,11 +323,18 @@ ${randOpXml}
         });
         filesSent++;
       } catch (error) {
-        console.error("n8n Webhook Error:", error);
+        let description = "A apărut o eroare necunoscută.";
+        if (axios.isAxiosError(error)) {
+            if (error.response?.status === 404) {
+                description = "URL-ul webhook-ului nu a fost găsit (Eroare 404). Verificați URL-ul și asigurați-vă că fluxul n8n este activ.";
+            } else {
+                description = error.message;
+            }
+        }
         toast({
           variant: "destructive",
           title: `Eroare la trimiterea OP #${index + 1} către n8n`,
-          description: axios.isAxiosError(error) ? error.message : "A apărut o eroare necunoscută.",
+          description: description,
         });
       }
     }
@@ -397,11 +404,6 @@ ${randOpXml}
                 </FormItem>
               )}
             />
-            {/* These fields are part of the schema but not shown in UI, keeping them for data consistency */}
-            {/* <FormField control={form.control} name="nr_document" render={({ field }) => ( <FormItem> <FormLabel>Număr Document</FormLabel> <FormControl><Input {...field} maxLength={10} /></FormControl> <FormMessage /> </FormItem> )} /> */}
-            {/* <FormField control={form.control} name="tip_ent" render={({ field }) => ( <FormItem> <FormLabel>Tip Entitate</FormLabel> <FormControl><Input {...field} /></FormControl> <FormMessage /> </FormItem> )} /> */}
-            {/* <FormField control={form.control} name="cod_trez_pl" render={({ field }) => ( <FormItem> <FormLabel>Cod Trezorerie</FormLabel> <FormControl><Input {...field} /></FormControl> <FormMessage /> </FormItem> )} /> */}
-            {/* <FormField control={form.control} name="suma_control" render={({ field }) => ( <FormItem> <FormLabel>Sumă Control</FormLabel> <FormControl><Input {...field} /></FormControl> <FormMessage /> </FormItem> )} /> */}
           </CardContent>
         </Card>
         
@@ -516,5 +518,3 @@ ${randOpXml}
     </Form>
   );
 }
-
-    
