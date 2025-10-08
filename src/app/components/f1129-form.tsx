@@ -17,8 +17,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { useToast } from '@/hooks/use-toast';
-import { Download, Upload, PlusCircle, Trash2, CalendarIcon, RefreshCw } from 'lucide-react';
+import { Download, Upload, PlusCircle, Trash2, CalendarIcon, RefreshCw, Send } from 'lucide-react';
 import { z } from 'zod';
+import axios from 'axios';
 
 type PaymentOrder = z.infer<typeof paymentOrderSchema>;
 
@@ -66,6 +67,7 @@ const defaultValues: Omit<FormData, 'data_document'> = {
   cui_ip: "24372699",
   tip_ent: "2",
   cod_trez_pl: "TREZ291",
+  n8nWebhookUrl: "",
   rand_op: [
     {
       nr_op: "22",
@@ -198,6 +200,7 @@ export function F1129Form() {
         cui_ip: getAttr('cui_ip'),
         tip_ent: getAttr('tip_ent'),
         cod_trez_pl: getAttr('cod_trez_pl'),
+        n8nWebhookUrl: form.getValues('n8nWebhookUrl'),
         rand_op: randOps.length > 0 ? randOps : defaultValues.rand_op,
       });
 
@@ -222,6 +225,22 @@ export function F1129Form() {
     return Object.keys(opTypes).find(key => opTypes[key].iban_beneficiar === iban);
   };
   
+  const generateXmlString = (data: FormData, op: PaymentOrder): string => {
+    const total_opm = op.suma_op;
+    const nr_inregistrari = 1;
+    const nrDocumentPadded = String(op.nr_op).padStart(10, '0');
+    
+    let randOpXml = `<rand_op nr_op="${op.nr_op}" iban_platitor="${op.iban_platitor}" den_trezorerie="${op.den_trezorerie}" cui_beneficiar="${op.cui_beneficiar}" den_beneficiar="${op.den_beneficiar}" iban_beneficiar="${op.iban_beneficiar}" den_banca_trez="${op.den_banca_trez}" suma_op="${op.suma_op}" explicatii="${op.explicatii}"/>`;
+
+    const formattedDate = data.data_document ? format(data.data_document, "dd.MM.yyyy") : format(new Date(), "dd.MM.yyyy");
+    const sumaControl = data.cui_ip + String(total_opm).replace('.', '');
+      
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<f1129 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="mfp:anaf:dgti:f1129:declaratie:v1" xsi:schemaLocation="mfp:anaf:dgti:f1129:declaratie:v1" versiune_pdf="A2.0.42" d_rec="${data.d_rec}" suma_control="${sumaControl}" total_opm="${total_opm}" nr_inregistrari="${nr_inregistrari}" luna_r="${data.luna_r}" an="${data.an}" data_document="${formattedDate}" nr_document="${nrDocumentPadded}" nume_ip="${data.nume_ip}" adresa_ip="${data.adresa_ip}" cui_ip="${data.cui_ip}" tip_ent="${data.tip_ent}" cod_trez_pl="${data.cod_trez_pl}">
+${randOpXml}
+</f1129>`;
+  };
+  
   const onSubmit = (data: FormData) => {
     if (!data.data_document) {
       toast({
@@ -235,24 +254,11 @@ export function F1129Form() {
     let filesGenerated = 0;
 
     data.rand_op.forEach((op, index) => {
-      const total_opm = op.suma_op;
-      const nr_inregistrari = 1;
-      const nrDocumentPadded = String(op.nr_op).padStart(10, '0');
-      
-      let randOpXml = `<rand_op nr_op="${op.nr_op}" iban_platitor="${op.iban_platitor}" den_trezorerie="${op.den_trezorerie}" cui_beneficiar="${op.cui_beneficiar}" den_beneficiar="${op.den_beneficiar}" iban_beneficiar="${op.iban_beneficiar}" den_banca_trez="${op.den_banca_trez}" suma_op="${op.suma_op}" explicatii="${op.explicatii}"/>`;
-
-      const formattedDate = format(data.data_document, "dd.MM.yyyy");
-      const sumaControl = data.cui_ip + String(total_opm).replace('.', '');
-      
+      const xmlString = generateXmlString(data, op);
       const opTypeKey = getOpTypeKeyByIBAN(op.iban_beneficiar);
       const opTypeLabel = opTypeKey ? opTypes[opTypeKey].label : `OP_${index + 1}`;
       const uniqueId = Date.now() + index;
       const fileName = `f1129_${opTypeLabel}_${uniqueId}.xml`;
-
-      const xmlString = `<?xml version="1.0" encoding="UTF-8"?>
-<f1129 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="mfp:anaf:dgti:f1129:declaratie:v1" xsi:schemaLocation="mfp:anaf:dgti:f1129:declaratie:v1" versiune_pdf="A2.0.42" d_rec="${data.d_rec}" suma_control="${sumaControl}" total_opm="${total_opm}" nr_inregistrari="${nr_inregistrari}" luna_r="${data.luna_r}" an="${data.an}" data_document="${formattedDate}" nr_document="${nrDocumentPadded}" nume_ip="${data.nume_ip}" adresa_ip="${data.adresa_ip}" cui_ip="${data.cui_ip}" tip_ent="${data.tip_ent}" cod_trez_pl="${data.cod_trez_pl}">
-${randOpXml}
-</f1129>`;
 
       try {
         const blob = new Blob([xmlString], { type: 'application/xml;charset=utf-8;' });
@@ -278,6 +284,58 @@ ${randOpXml}
       toast({
         title: "XML-uri Generate!",
         description: `${filesGenerated} fișier(e) XML au fost descărcate cu succes.`,
+      });
+    }
+  };
+
+  const handleSendToN8n = async (data: FormData) => {
+    const { n8nWebhookUrl } = data;
+    if (!n8nWebhookUrl) {
+      toast({
+        variant: "destructive",
+        title: "Eroare",
+        description: "Vă rugăm să introduceți URL-ul webhook-ului n8n.",
+      });
+      return;
+    }
+
+    if (!data.data_document) {
+      toast({
+        variant: "destructive",
+        title: "Eroare",
+        description: "Data documentului este obligatorie.",
+      });
+      return;
+    }
+
+    let filesSent = 0;
+    for (const [index, op] of data.rand_op.entries()) {
+      const xmlString = generateXmlString(data, op);
+      const opTypeKey = getOpTypeKeyByIBAN(op.iban_beneficiar);
+      const opTypeLabel = opTypeKey ? opTypes[opTypeKey].label : `OP_${index + 1}`;
+
+      try {
+        await axios.post(n8nWebhookUrl, {
+          fileName: `f1129_${opTypeLabel}_${Date.now() + index}.xml`,
+          xmlContent: xmlString,
+        }, {
+          headers: { 'Content-Type': 'application/json' }
+        });
+        filesSent++;
+      } catch (error) {
+        console.error("n8n Webhook Error:", error);
+        toast({
+          variant: "destructive",
+          title: `Eroare la trimiterea OP #${index + 1} către n8n`,
+          description: axios.isAxiosError(error) ? error.message : "A apărut o eroare necunoscută.",
+        });
+      }
+    }
+
+    if (filesSent > 0) {
+      toast({
+        title: "Succes!",
+        description: `${filesSent} fișier(e) XML au fost trimise către n8n.`,
       });
     }
   };
@@ -339,10 +397,11 @@ ${randOpXml}
                 </FormItem>
               )}
             />
-            <FormField control={form.control} name="nr_document" render={({ field }) => ( <FormItem> <FormLabel>Număr Document</FormLabel> <FormControl><Input {...field} maxLength={10} /></FormControl> <FormMessage /> </FormItem> )} />
-            <FormField control={form.control} name="tip_ent" render={({ field }) => ( <FormItem> <FormLabel>Tip Entitate</FormLabel> <FormControl><Input {...field} /></FormControl> <FormMessage /> </FormItem> )} />
-            <FormField control={form.control} name="cod_trez_pl" render={({ field }) => ( <FormItem> <FormLabel>Cod Trezorerie</FormLabel> <FormControl><Input {...field} /></FormControl> <FormMessage /> </FormItem> )} />
-            <FormField control={form.control} name="suma_control" render={({ field }) => ( <FormItem> <FormLabel>Sumă Control</FormLabel> <FormControl><Input {...field} /></FormControl> <FormMessage /> </FormItem> )} />
+            {/* These fields are part of the schema but not shown in UI, keeping them for data consistency */}
+            {/* <FormField control={form.control} name="nr_document" render={({ field }) => ( <FormItem> <FormLabel>Număr Document</FormLabel> <FormControl><Input {...field} maxLength={10} /></FormControl> <FormMessage /> </FormItem> )} /> */}
+            {/* <FormField control={form.control} name="tip_ent" render={({ field }) => ( <FormItem> <FormLabel>Tip Entitate</FormLabel> <FormControl><Input {...field} /></FormControl> <FormMessage /> </FormItem> )} /> */}
+            {/* <FormField control={form.control} name="cod_trez_pl" render={({ field }) => ( <FormItem> <FormLabel>Cod Trezorerie</FormLabel> <FormControl><Input {...field} /></FormControl> <FormMessage /> </FormItem> )} /> */}
+            {/* <FormField control={form.control} name="suma_control" render={({ field }) => ( <FormItem> <FormLabel>Sumă Control</FormLabel> <FormControl><Input {...field} /></FormControl> <FormMessage /> </FormItem> )} /> */}
           </CardContent>
         </Card>
         
@@ -356,7 +415,7 @@ ${randOpXml}
               <CardContent className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                  <OrdinePlataCard index={index} />
                  <FormField control={form.control} name={`rand_op.${index}.suma_op`} render={({ field }) => ( <FormItem> <FormLabel>Sumă</FormLabel> <FormControl><Input type="number" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl> <FormMessage /> </FormItem> )} />
-                 <FormField control={form.control} name={`rand_op.${index}.nr_op`} render={({ field }) => ( <FormItem> <FormLabel>Nr. OP</FormLabel> <FormControl><Input {...field} maxLength={10} /></FormControl> <FormMessage /> </FormItem> )} />
+                 <FormField control={form.control} name={`rand_op.${index}.nr_op`} render={({ field }) => ( <FormItem> <FormLabel>Nr. OP</FormLabel> <FormControl><Input {...field} /></FormControl> <FormMessage /> </FormItem> )} />
                  <FormField control={form.control} name={`rand_op.${index}.iban_platitor`} render={({ field }) => ( <FormItem> <FormLabel>IBAN Plătitor</FormLabel> <FormControl><Input {...field} /></FormControl> <FormMessage /> </FormItem> )} />
                  <FormField control={form.control} name={`rand_op.${index}.den_trezorerie`} render={({ field }) => ( <FormItem> <FormLabel>Denumire Trezorerie</FormLabel> <FormControl><Input {...field} /></FormControl> <FormMessage /> </FormItem> )} />
                  <FormField control={form.control} name={`rand_op.${index}.cui_beneficiar`} render={({ field }) => ( <FormItem> <FormLabel>CUI Beneficiar</FormLabel> <FormControl><Input {...field} /></FormControl> <FormMessage /> </FormItem> )} />
@@ -398,40 +457,64 @@ ${randOpXml}
         <Card className="shadow-lg mt-6">
           <CardHeader>
             <CardTitle className="font-headline text-2xl">Acțiuni rapide</CardTitle>
-            <CardDescription>Importați, exportați sau actualizați datele formularului.</CardDescription>
+            <CardDescription>Importați, exportați, actualizați sau automatizați datele formularului.</CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-wrap gap-4">
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button variant="outline"><Upload className="mr-2 h-4 w-4" /> Încarcă din XML</Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[625px]">
-                <DialogHeader>
-                  <DialogTitle className="font-headline">Importă date din XML</DialogTitle>
-                  <DialogDescription>Copiați conținutul fișierului XML în câmpul de mai jos și apăsați 'Încarcă Date'.</DialogDescription>
-                </DialogHeader>
-                <Textarea
-                  placeholder="<f1129>...</f1129>"
-                  className="min-h-[200px] font-mono text-xs"
-                  value={xmlInput}
-                  onChange={(e) => setXmlInput(e.target.value)}
+          <CardContent className="space-y-4">
+            <div className="flex flex-wrap gap-4">
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="outline"><Upload className="mr-2 h-4 w-4" /> Încarcă din XML</Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[625px]">
+                    <DialogHeader>
+                      <DialogTitle className="font-headline">Importă date din XML</DialogTitle>
+                      <DialogDescription>Copiați conținutul fișierului XML în câmpul de mai jos și apăsați 'Încarcă Date'.</DialogDescription>
+                    </DialogHeader>
+                    <Textarea
+                      placeholder="<f1129>...</f1129>"
+                      className="min-h-[200px] font-mono text-xs"
+                      value={xmlInput}
+                      onChange={(e) => setXmlInput(e.target.value)}
+                    />
+                    <DialogFooter>
+                      <DialogClose asChild>
+                        <Button type="button" onClick={() => { if(handleLoadXml()) setXmlInput('') }}>Încarcă Date</Button>
+                      </DialogClose>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+                <Button type="submit" className="bg-accent text-accent-foreground hover:bg-accent/90"><Download className="mr-2 h-4 w-4" /> Generează și Descarcă XML</Button>
+                <Button asChild variant="secondary">
+                    <a href="https://static.anaf.ro/static/10/Anaf/Declaratii_R/1129.html" target="_blank" rel="noopener noreferrer">
+                        <RefreshCw className="mr-2 h-4 w-4" /> Actualizare fișier OPME
+                    </a>
+                </Button>
+            </div>
+            <div className="space-y-2 rounded-lg border bg-card p-4">
+                <h3 className="font-headline text-lg font-semibold">Integrare n8n</h3>
+                <p className="text-sm text-muted-foreground">Introduceți URL-ul webhook-ului de la n8n pentru a trimite automat fișierele XML generate.</p>
+                <FormField
+                    control={form.control}
+                    name="n8nWebhookUrl"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>n8n Webhook URL</FormLabel>
+                            <FormControl>
+                                <Input placeholder="https://n8n.example.com/webhook/..." {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
                 />
-                <DialogFooter>
-                  <DialogClose asChild>
-                    <Button type="button" onClick={() => { if(handleLoadXml()) setXmlInput('') }}>Încarcă Date</Button>
-                  </DialogClose>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-            <Button type="submit" className="bg-accent text-accent-foreground hover:bg-accent/90"><Download className="mr-2 h-4 w-4" /> Generează și Descarcă XML</Button>
-            <Button asChild variant="secondary">
-                <a href="https://static.anaf.ro/static/10/Anaf/Declaratii_R/1129.html" target="_blank" rel="noopener noreferrer">
-                    <RefreshCw className="mr-2 h-4 w-4" /> Actualizare fișier OPME
-                </a>
-            </Button>
+                 <Button type="button" onClick={form.handleSubmit(handleSendToN8n)} className="mt-2">
+                    <Send className="mr-2 h-4 w-4" /> Trimite la n8n
+                </Button>
+            </div>
           </CardContent>
         </Card>
       </form>
     </Form>
   );
 }
+
+    

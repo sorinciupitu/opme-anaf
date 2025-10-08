@@ -21,15 +21,20 @@ export const formSchema = z.object({
   data_document: z.date({
     required_error: "Data documentului este obligatorie.",
   }),
-  nr_document: z.string().min(1, { message: "Numărul documentului este obligatoriu." }),
+  nr_document: z.string(), // This is derived from nr_op, so no validation needed here
   nume_ip: z.string().min(1, { message: "Numele este obligatoriu." }),
   adresa_ip: z.string().min(1, { message: "Adresa este obligatorie." }),
   cui_ip: z.string().min(1, { message: "CUI este obligatoriu." }),
   tip_ent: z.string().min(1, { message: "Tip entitate este obligatoriu." }),
   cod_trez_pl: z.string().min(1, { message: "Cod trezorerie este obligatoriu." }),
   
+  // n8n integration
+  n8nWebhookUrl: z.string().url({ message: "Vă rugăm introduceți un URL valid." }).optional().or(z.literal("")),
+
   // rand_op elements
   rand_op: z.array(paymentOrderSchema).min(1, "Trebuie să existe cel puțin un ordin de plată."),
 });
 
 export type FormData = z.infer<typeof formSchema>;
+
+    
