@@ -53,8 +53,7 @@ export function SignUpForm() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
     try {
-      const userCredential = await signUpWithEmail(values.email, values.password);
-      const user = userCredential;
+      const user = await signUpWithEmail(values.email, values.password);
 
       if (user && firestore) {
         // Create user profile in Firestore
