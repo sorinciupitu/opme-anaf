@@ -65,24 +65,19 @@ export function SignUpForm() {
       const user = await signUpWithEmail(values.email, values.password);
 
       if (user) {
-        // Create user profile in Firestore
+        // IMPORTANT: Replace 'PASTE_YOUR_UID_HERE' with your actual User UID from the Firebase Console.
+        const isAdmin = user.uid === 'YkB0MUkVBbel5R1FtDmnAtgJycs2';
+
         const userProfile = {
           email: user.email,
-          role: 'user', // Default role
-          status: 'pending', // Default status
+          role: isAdmin ? 'admin' : 'user',
+          status: isAdmin ? 'approved' : 'pending',
           createdAt: new Date(),
         };
         
         const userDocRef = doc(firestore, 'users', user.uid);
         await setDoc(userDocRef, userProfile);
-
-        // This is where you set the first user as admin.
-        // IMPORTANT: Replace 'PASTE_YOUR_UID_HERE' with your actual User UID from the Firebase Console.
-        if (user.uid === 'PASTE_YOUR_UID_HERE') {
-             await setDoc(userDocRef, { role: 'admin', status: 'approved' }, { merge: true });
-        }
       }
-
 
       toast({
         title: 'Cont creat cu succes!',
