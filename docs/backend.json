@@ -1,0 +1,187 @@
+{
+  "entities": {
+    "F1129": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "F1129",
+      "type": "object",
+      "description": "Represents the F1129 form data as extracted from the XML.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the F1129 form data."
+        },
+        "versiunePdf": {
+          "type": "string",
+          "description": "The PDF version of the F1129 form."
+        },
+        "dRec": {
+          "type": "number",
+          "description": "A numeric field from the F1129 form."
+        },
+        "sumaControl": {
+          "type": "number",
+          "description": "The control sum from the F1129 form."
+        },
+        "totalOpm": {
+          "type": "number",
+          "description": "Total number of OPM entries in the F1129 form."
+        },
+        "nrInregistrari": {
+          "type": "number",
+          "description": "Number of registrations in the F1129 form."
+        },
+        "lunaR": {
+          "type": "number",
+          "description": "The month of the report (luna_r) in the F1129 form."
+        },
+        "an": {
+          "type": "number",
+          "description": "The year of the F1129 form."
+        },
+        "dataDocument": {
+          "type": "string",
+          "description": "The date of the document in the F1129 form.",
+          "format": "date-time"
+        },
+        "nrDocument": {
+          "type": "string",
+          "description": "The document number in the F1129 form."
+        },
+        "numeIp": {
+          "type": "string",
+          "description": "Name of the IP (platitor) in the F1129 form."
+        },
+        "adresaIp": {
+          "type": "string",
+          "description": "Address of the IP (platitor) in the F1129 form."
+        },
+        "cuiIp": {
+          "type": "string",
+          "description": "CUI (fiscal identification code) of the IP (platitor) in the F1129 form."
+        },
+        "tipEnt": {
+          "type": "number",
+          "description": "Type of entity in the F1129 form."
+        },
+        "codTrezPl": {
+          "type": "string",
+          "description": "The treasury code of the payer in the F1129 form."
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "RandOp": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "RandOp",
+      "type": "object",
+      "description": "Represents a row (rand_op) in the F1129 form, detailing a payment operation.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the payment operation row (rand_op)."
+        },
+        "f1129Id": {
+          "type": "string",
+          "description": "Reference to F1129. (Relationship: F1129 1:N RandOp)"
+        },
+        "nrOp": {
+          "type": "string",
+          "description": "The operation number (nr_op) in the payment operation."
+        },
+        "ibanPlatitor": {
+          "type": "string",
+          "description": "The IBAN of the payer (iban_platitor) in the payment operation."
+        },
+        "denTrezorerie": {
+          "type": "string",
+          "description": "The name of the treasury (den_trezorerie) in the payment operation."
+        },
+        "cuiBeneficiar": {
+          "type": "string",
+          "description": "The CUI (fiscal identification code) of the beneficiary (cui_beneficiar) in the payment operation."
+        },
+        "denBeneficiar": {
+          "type": "string",
+          "description": "The name of the beneficiary (den_beneficiar) in the payment operation."
+        },
+        "ibanBeneficiar": {
+          "type": "string",
+          "description": "The IBAN of the beneficiary (iban_beneficiar) in the payment operation."
+        },
+        "denBancaTrez": {
+          "type": "string",
+          "description": "The name of the treasury bank (den_banca_trez) in the payment operation."
+        },
+        "sumaOp": {
+          "type": "number",
+          "description": "The amount (suma_op) in the payment operation."
+        },
+        "explicatii": {
+          "type": "string",
+          "description": "Explanations related to the payment operation."
+        }
+      },
+      "required": [
+        "id",
+        "f1129Id"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}/f1129s/{f1129Id}",
+        "definition": {
+          "entityName": "F1129",
+          "schema": {
+            "$ref": "#/backend/entities/F1129"
+          },
+          "description": "Stores F1129 form data owned by a specific user.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The ID of the user who owns the F1129 form."
+            },
+            {
+              "name": "f1129Id",
+              "description": "The unique ID of the F1129 form."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/f1129s/{f1129Id}/randOps/{randOpId}",
+        "definition": {
+          "entityName": "RandOp",
+          "schema": {
+            "$ref": "#/backend/entities/RandOp"
+          },
+          "description": "Stores RandOp (payment operation row) data associated with a specific F1129 form.  The parent f1129Id and userId provide authorization context.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The ID of the user who owns the F1129 form (and thus the RandOp)."
+            },
+            {
+              "name": "f1129Id",
+              "description": "The ID of the parent F1129 form."
+            },
+            {
+              "name": "randOpId",
+              "description": "The unique ID of the RandOp."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to store F1129 form data and related payment operation rows (RandOp). Given that the application focuses on automatically filling the F1129 form and preserving its structure for digital signatures, the structure prioritizes data integrity and easy retrieval.\n\n**Structure Justification:**\n\n1.  **/users/{userId}/f1129s/{f1129Id}**: This path stores the F1129 form data. Each user owns their F1129 forms. This structure provides path-based ownership.\n2.  **/users/{userId}/f1129s/{f1129Id}/randOps/{randOpId}**: This path stores the payment operation rows associated with an F1129 form. These rows are nested under the corresponding F1129 document.\n\n**Authorization Independence:**\n\nThe structure does not require denormalization because the relationship between users and their F1129 forms is path-based.  Authorization rules can rely on `request.auth.uid` matching the `userId` in the path.  The `RandOp` documents inherit ownership from the parent `F1129` document, so no further denormalization is needed.\n\n**QAPs (Rules are not Filters):**\n\nThis structure naturally supports secure `list` operations because data with different access needs are stored in separate collections (private data under `/users/{userId}`).  Listing F1129 forms or `RandOp` rows is restricted to the owning user, preventing unauthorized access.\n"
+  }
+}
