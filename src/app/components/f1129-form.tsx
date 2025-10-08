@@ -139,10 +139,16 @@ export function F1129Form() {
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      ...defaultValues,
-      data_document: new Date(),
+      ...defaultValues
     },
   });
+
+  useEffect(() => {
+    form.reset({
+      ...defaultValues,
+      data_document: new Date()
+    });
+  }, [form]);
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
