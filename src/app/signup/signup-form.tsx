@@ -64,24 +64,22 @@ export function SignUpForm() {
     try {
       const user = await signUpWithEmail(values.email, values.password);
 
-      if (user) {
-        // IMPORTANT: Replace 'PASTE_YOUR_UID_HERE' with your actual User UID from the Firebase Console.
-        const isAdmin = user.uid === 'rsx5cuwjjrZqZzE0CoeiJms5QX42';
+      // IMPORTANT: Replace 'PASTE_YOUR_UID_HERE' with your actual User UID from the Firebase Console.
+      const isAdmin = user.uid === 'ZNGHLJS3ktUd0PfWH8rUZeZlzOW2';
 
-        const userProfile = {
-          email: user.email,
-          role: isAdmin ? 'admin' : 'user',
-          status: isAdmin ? 'approved' : 'pending',
-          createdAt: new Date(),
-        };
-        
-        const userDocRef = doc(firestore, 'users', user.uid);
-        await setDoc(userDocRef, userProfile);
-      }
+      const userProfile = {
+        email: user.email,
+        role: isAdmin ? 'admin' : 'user',
+        status: isAdmin ? 'approved' : 'pending',
+        createdAt: new Date(),
+      };
+      
+      const userDocRef = doc(firestore, 'users', user.uid);
+      await setDoc(userDocRef, userProfile);
 
       toast({
         title: 'Cont creat cu succes!',
-        description: 'Contul tău este în așteptarea aprobării unui administrator.',
+        description: 'Vei fi redirecționat către pagina principală.',
       });
       router.push('/');
     } catch (error: any) {

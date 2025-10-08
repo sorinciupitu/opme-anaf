@@ -7,6 +7,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
+  UserCredential,
 } from 'firebase/auth';
 import { useFirebase } from '../provider';
 
@@ -16,6 +17,7 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!auth) return;
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       setLoading(false);
@@ -25,13 +27,8 @@ export function useAuth() {
   }, [auth]);
 
   const signUpWithEmail = async (email: string, password: string): Promise<User> => {
-    try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential: UserCredential = await createUserWithEmailAndPassword(auth, email, password);
       return userCredential.user;
-    } catch (error) {
-      console.error('Error signing up:', error);
-      throw error;
-    }
   };
 
   const signInWithEmail = async (email: string, password: string): Promise<User> => {
