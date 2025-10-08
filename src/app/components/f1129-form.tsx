@@ -101,7 +101,7 @@ function OrdinePlataCard({ index }: { index: number }) {
       
       Object.keys(preset).forEach(key => {
         const fieldKey = key as keyof PaymentOrder;
-        if (fieldKey !== 'suma_op' && fieldKey !== 'nr_op') {
+        if (fieldKey !== 'suma_op' && fieldKey !== 'nr_op' && fieldKey !== 'label') {
             setValue(`rand_op.${index}.${fieldKey}`, preset[fieldKey] as any);
         }
       });
@@ -222,12 +222,22 @@ export function F1129Form() {
   };
   
   const onSubmit = (data: FormData) => {
+    if (!data.data_document) {
+      toast({
+        variant: "destructive",
+        title: "Eroare",
+        description: "Data documentului este obligatorie.",
+      });
+      return;
+    }
+
     let filesGenerated = 0;
     data.rand_op.forEach((op, index) => {
       const total_opm = op.suma_op;
       const nr_inregistrari = 1;
+      const nrDocumentPadded = String(op.nr_op).padStart(10, '0');
 
-      let randOpXml = `<rand_op nr_op="${op.nr_op}" iban_platitor="${op.iban_platitor}" den_trezorerie="${op.den_trezorerie}" cui_beneficiar="${op.cui_beneficiar}" den_beneficiar="${op.den_beneficiar}" iban_beneficiar="${op.iban_beneficiar}" den_banca_trez="${op.den_banca_trez}" suma_op="${op.suma_op}" explicatii="${op.explicatii}"/>`;
+      let randOpXml = `<rand_op nr_op="${nrDocumentPadded}" iban_platitor="${op.iban_platitor}" den_trezorerie="${op.den_trezorerie}" cui_beneficiar="${op.cui_beneficiar}" den_beneficiar="${op.den_beneficiar}" iban_beneficiar="${op.iban_beneficiar}" den_banca_trez="${op.den_banca_trez}" suma_op="${op.suma_op}" explicatii="${op.explicatii}"/>`;
 
       const formattedDate = format(data.data_document, "dd.MM.yyyy");
       const sumaControl = data.cui_ip + String(total_opm).replace('.', '');
@@ -238,7 +248,7 @@ export function F1129Form() {
       const fileName = `f1129_${opTypeLabel}_${uniqueId}.xml`;
 
       const xmlString = `<?xml version="1.0" encoding="UTF-8"?>
-<f1129 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="mfp:anaf:dgti:f1129:declaratie:v1" xsi:schemaLocation="mfp:anaf:dgti:f1129:declaratie:v1" versiune_pdf="A2.0.42" d_rec="${data.d_rec}" suma_control="${sumaControl}" total_opm="${total_opm}" nr_inregistrari="${nr_inregistrari}" luna_r="${data.luna_r}" an="${data.an}" data_document="${formattedDate}" nr_document="${op.nr_op}" nume_ip="${data.nume_ip}" adresa_ip="${data.adresa_ip}" cui_ip="${data.cui_ip}" tip_ent="${data.tip_ent}" cod_trez_pl="${data.cod_trez_pl}">
+<f1129 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="mfp:anaf:dgti:f1129:declaratie:v1" xsi:schemaLocation="mfp:anaf:dgti:f1129:declaratie:v1" versiune_pdf="A2.0.42" d_rec="${data.d_rec}" suma_control="${sumaControl}" total_opm="${total_opm}" nr_inregistrari="${nr_inregistrari}" luna_r="${data.luna_r}" an="${data.an}" data_document="${formattedDate}" nr_document="${nrDocumentPadded}" nume_ip="${data.nume_ip}" adresa_ip="${data.adresa_ip}" cui_ip="${data.cui_ip}" tip_ent="${data.tip_ent}" cod_trez_pl="${data.cod_trez_pl}">
 ${randOpXml}
 </f1129>`;
 
@@ -327,7 +337,7 @@ ${randOpXml}
                 </FormItem>
               )}
             />
-            <FormField control={form.control} name="nr_document" render={({ field }) => ( <FormItem> <FormLabel>Număr Document</FormLabel> <FormControl><Input {...field} /></FormControl> <FormMessage /> </FormItem> )} />
+            <FormField control={form.control} name="nr_document" render={({ field }) => ( <FormItem> <FormLabel>Număr Document</FormLabel> <FormControl><Input {...field} maxLength={10} /></FormControl> <FormMessage /> </FormItem> )} />
             <FormField control={form.control} name="tip_ent" render={({ field }) => ( <FormItem> <FormLabel>Tip Entitate</FormLabel> <FormControl><Input {...field} /></FormControl> <FormMessage /> </FormItem> )} />
             <FormField control={form.control} name="cod_trez_pl" render={({ field }) => ( <FormItem> <FormLabel>Cod Trezorerie</FormLabel> <FormControl><Input {...field} /></FormControl> <FormMessage /> </FormItem> )} />
             <FormField control={form.control} name="suma_control" render={({ field }) => ( <FormItem> <FormLabel>Sumă Control</FormLabel> <FormControl><Input {...field} /></FormControl> <FormMessage /> </FormItem> )} />
@@ -344,7 +354,7 @@ ${randOpXml}
               <CardContent className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                  <OrdinePlataCard index={index} />
                  <FormField control={form.control} name={`rand_op.${index}.suma_op`} render={({ field }) => ( <FormItem> <FormLabel>Sumă</FormLabel> <FormControl><Input type="number" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl> <FormMessage /> </FormItem> )} />
-                 <FormField control={form.control} name={`rand_op.${index}.nr_op`} render={({ field }) => ( <FormItem> <FormLabel>Nr. OP</FormLabel> <FormControl><Input {...field} /></FormControl> <FormMessage /> </FormItem> )} />
+                 <FormField control={form.control} name={`rand_op.${index}.nr_op`} render={({ field }) => ( <FormItem> <FormLabel>Nr. OP</FormLabel> <FormControl><Input {...field} maxLength={10} /></FormControl> <FormMessage /> </FormItem> )} />
                  <FormField control={form.control} name={`rand_op.${index}.iban_platitor`} render={({ field }) => ( <FormItem> <FormLabel>IBAN Plătitor</FormLabel> <FormControl><Input {...field} /></FormControl> <FormMessage /> </FormItem> )} />
                  <FormField control={form.control} name={`rand_op.${index}.den_trezorerie`} render={({ field }) => ( <FormItem> <FormLabel>Denumire Trezorerie</FormLabel> <FormControl><Input {...field} /></FormControl> <FormMessage /> </FormItem> )} />
                  <FormField control={form.control} name={`rand_op.${index}.cui_beneficiar`} render={({ field }) => ( <FormItem> <FormLabel>CUI Beneficiar</FormLabel> <FormControl><Input {...field} /></FormControl> <FormMessage /> </FormItem> )} />
@@ -423,5 +433,3 @@ ${randOpXml}
     </Form>
   );
 }
-
-    
