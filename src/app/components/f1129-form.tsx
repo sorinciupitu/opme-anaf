@@ -140,7 +140,7 @@ export function F1129Form() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       ...defaultValues,
-      data_document: new Date(),
+      data_document: undefined,
     },
   });
 
@@ -216,7 +216,8 @@ export function F1129Form() {
     }
   };
 
-  const getOpTypeKeyByIBAN = (iban: string) => {
+  const getOpTypeKeyByIBAN = (iban: string | undefined) => {
+    if (!iban) return undefined;
     return Object.keys(opTypes).find(key => opTypes[key].iban_beneficiar === iban);
   };
   
@@ -237,7 +238,7 @@ export function F1129Form() {
       const fileName = `f1129_${opTypeLabel}_${uniqueId}.xml`;
 
       const xmlString = `<?xml version="1.0" encoding="UTF-8"?>
-<f1129 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="mfp:anaf:dgti:f1129:declaratie:v1" xsi:schemaLocation="mfp:anaf:dgti:f1129:declaratie:v1" versiune_pdf="A2.0.42" d_rec="${data.d_rec}" suma_control="${sumaControl}" total_opm="${total_opm}" nr_inregistrari="${nr_inregistrari}" luna_r="${data.luna_r}" an="${data.an}" data_document="${formattedDate}" nr_document="${data.nr_document}" nume_ip="${data.nume_ip}" adresa_ip="${data.adresa_ip}" cui_ip="${data.cui_ip}" tip_ent="${data.tip_ent}" cod_trez_pl="${data.cod_trez_pl}">
+<f1129 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="mfp:anaf:dgti:f1129:declaratie:v1" xsi:schemaLocation="mfp:anaf:dgti:f1129:declaratie:v1" versiune_pdf="A2.0.42" d_rec="${data.d_rec}" suma_control="${sumaControl}" total_opm="${total_opm}" nr_inregistrari="${nr_inregistrari}" luna_r="${data.luna_r}" an="${data.an}" data_document="${formattedDate}" nr_document="${op.nr_op}" nume_ip="${data.nume_ip}" adresa_ip="${data.adresa_ip}" cui_ip="${data.cui_ip}" tip_ent="${data.tip_ent}" cod_trez_pl="${data.cod_trez_pl}">
 ${randOpXml}
 </f1129>`;
 
@@ -422,3 +423,5 @@ ${randOpXml}
     </Form>
   );
 }
+
+    
