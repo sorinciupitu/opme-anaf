@@ -140,7 +140,7 @@ export function F1129Form() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       ...defaultValues,
-      data_document: undefined,
+      data_document: new Date(),
     },
   });
 
@@ -148,10 +148,6 @@ export function F1129Form() {
     control: form.control,
     name: 'rand_op',
   });
-  
-  useEffect(() => {
-    form.setValue('data_document', new Date());
-  }, [form]);
 
   const handleLoadXml = () => {
     try {
@@ -232,12 +228,13 @@ export function F1129Form() {
     }
 
     let filesGenerated = 0;
+    const nrDocumentPadded = String(data.nr_document).padStart(10, '0');
+
     data.rand_op.forEach((op, index) => {
       const total_opm = op.suma_op;
       const nr_inregistrari = 1;
-      const nrDocumentPadded = String(op.nr_op).padStart(10, '0');
-
-      let randOpXml = `<rand_op nr_op="${nrDocumentPadded}" iban_platitor="${op.iban_platitor}" den_trezorerie="${op.den_trezorerie}" cui_beneficiar="${op.cui_beneficiar}" den_beneficiar="${op.den_beneficiar}" iban_beneficiar="${op.iban_beneficiar}" den_banca_trez="${op.den_banca_trez}" suma_op="${op.suma_op}" explicatii="${op.explicatii}"/>`;
+      
+      let randOpXml = `<rand_op nr_op="${op.nr_op}" iban_platitor="${op.iban_platitor}" den_trezorerie="${op.den_trezorerie}" cui_beneficiar="${op.cui_beneficiar}" den_beneficiar="${op.den_beneficiar}" iban_beneficiar="${op.iban_beneficiar}" den_banca_trez="${op.den_banca_trez}" suma_op="${op.suma_op}" explicatii="${op.explicatii}"/>`;
 
       const formattedDate = format(data.data_document, "dd.MM.yyyy");
       const sumaControl = data.cui_ip + String(total_opm).replace('.', '');
@@ -393,7 +390,7 @@ ${randOpXml}
           </Button>
         </div>
         
-        <Card className="shadow-lg">
+        <Card className="shadow-lg mt-6">
           <CardHeader>
             <CardTitle className="font-headline text-2xl">Acțiuni rapide</CardTitle>
             <CardDescription>Importați, exportați sau actualizați datele formularului.</CardDescription>
