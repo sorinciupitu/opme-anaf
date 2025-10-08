@@ -66,7 +66,7 @@ export function SignUpForm() {
 
       if (user) {
         // IMPORTANT: Replace 'PASTE_YOUR_UID_HERE' with your actual User UID from the Firebase Console.
-        const isAdmin = user.uid === 'YkB0MUkVBbel5R1FtDmnAtgJycs2';
+        const isAdmin = user.uid === 'rsx5cuwjjrZqZzE0CoeiJms5QX42';
 
         const userProfile = {
           email: user.email,

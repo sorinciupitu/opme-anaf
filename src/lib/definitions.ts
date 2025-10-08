@@ -41,7 +41,7 @@ export const userProfileSchema = z.object({
   email: z.string().email(),
   role: z.enum(['user', 'admin']),
   status: z.enum(['pending', 'approved', 'rejected']),
-  createdAt: z.date(),
+  createdAt: z.any(), // Changed from z.date() to handle Firestore Timestamps
 });
 
 export type UserProfile = z.infer<typeof userProfileSchema>;
